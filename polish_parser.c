@@ -20,6 +20,10 @@ typedef struct lval{
 } lval;
 
 void lval_expr_print(lval* v, char open, char close);
+lval* lval_eval_sexpr(lval* v);
+lval* lval_take(lval* v, int i);
+lval* lval_pop(lval* v, int i);
+lval* builtin_op(char* op, lval* a);
 
 static char buffer[2048];
 enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR };
@@ -158,6 +162,59 @@ void lval_expr_print(lval* v, char open, char close) {
 
 void lval_println(lval* v) { lval_print(v); putchar('\n'); }
 
+lval* lval_eval(lval* v) {
+  if (v->type == LVAL_SEXPR) {
+    return lval_eval_sexpr(v);
+  }
+
+  /*all other lval types remain the same*/
+  return v;
+}
+
+lval *lval_eval_sexpr(lval* v) {
+
+
+  for (int i = 0; i < v->count; i++) {
+    v->cell[i] =  lval_eval(v->cell[i]);
+  }
+  
+  for (int i = 0; i < v->count; i++) {
+    if (v->cell[i]->type == LVAL_ERR) {
+      return lval_take(v, i);
+    }
+  }
+  
+  /* No child ()*/
+  if (v->count == 0) return v;
+  if (v->count == 1) {return lval_take(v, 0);}
+
+  lval* f = lval_pop(v, 0);
+  if (f->type != LVAL_SYM ) {
+    lval_del(f);
+    lval_del(v);
+    return lval_err("S-expression Does not start with symbol!");
+  }
+
+  lval* result =  builtin_op(f->sym, v);
+  lval_del(f);
+  return result;
+}
+
+lval* lval_pop(lval* v, int i) {
+  lval* x = v->cell[i];
+  memmove(&v->cell[i], &v->cell[i+1], sizeof(lval*)*(v->count-i-1));
+
+  v->count--;
+  v->cell = realloc(v->cell, sizeof(lval*)* v->count);
+  return x;
+}
+
+lval* lval_take(lval* v, int i) {
+  lval* x = lval_pop(v, i);
+  lval_del(v);
+  return x;
+}
+
 char* readline(char* prompt) {
   fputs(prompt, stdout);
   fgets(buffer, 2048, stdin);
@@ -168,24 +225,46 @@ char* readline(char* prompt) {
 }
 
 void add_history(char* unused) {}
-/*
-lval eval_op(lval x, char * op, lval y) {
 
-    if (x.type == LVAL_ERR) { return x; }
-    if (y.type == LVAL_ERR) { return y; }
+lval* builtin_op(char * op, lval* a) {
 
-    if (strcmp(op, "+") == 0) { return lval_num(x.num + y.num); }
-    if (strcmp(op, "c") == 0) { return lval_num(x.num - y.num); }
-    if (strcmp(op, "*") == 0) { return lval_num(x.num * y.num); }
-    if (strcmp(op, "/") == 0) {
-      return y.num == 0 ? lval_err(LERR_DIV_ZERO) : lval_num(x.num / y.num);
+  for (int i = 0; i< a->count ; i++) {
+    if(a->cell[i]->type != LVAL_NUM) {
+      lval_del(a);
+      return lval_err("Cannot operate on non number!");
     }
-    if (strcmp(op, "min") == 0) { return lval_num(MIN(x.num, y.num)); }
-    if (strcmp(op, "max") == 0) { return lval_num(MAX(x.num,y.num)); }
+  }
 
-    return lval_err(LERR_BAD_OP);   
+  lval* x = lval_pop(a, 0);
+
+  if ((strcmp(op, "-") ==0) && a->count == 0) {
+    x->num = -x->num;
+  }
+  while (a->count > 0 ) {
+
+    lval *y = lval_pop(a, 0);
+    
+    if (strcmp(op, "+") == 0) { x->num += y->num; }
+    if (strcmp(op, "c") == 0) { x->num -= y->num; }
+    if (strcmp(op, "*") == 0) { x->num *= y->num; }
+    if (strcmp(op, "/") == 0) {
+      if (y->num == 0) {
+        lval_del(y);
+        x = lval_err("division by Zerro!");
+        break;
+      }
+      x->num /= y->num;
+    }
+
+    lval_del(y);
+
+  }
+
+  lval_del(a);
+
+  return x;
 }
-
+/*
 lval eval(mpc_ast_t* t) {
   if (strstr(t->tag, "number")) {
     errno = 0;
@@ -239,7 +318,7 @@ int main(int argc, char** argv) {
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
 
       mpc_ast_print(r.output);
-      lval* x = lval_read(r.output);
+      lval* x = lval_eval(lval_read(r.output));
       lval_println(x);
       lval_del(x);
       mpc_ast_delete(r.output);
