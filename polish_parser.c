@@ -243,6 +243,55 @@ char* readline(char* prompt) {
 
 void add_history(char* unused) {}
 
+lval* buil_in_head(lval* a) {
+  
+  if (a->count == 0) {
+    lval_del(a);
+    return lval_err("Function 'head' passed no ars!");
+  }
+  if (a->count !=1 ) {
+    lval_del(a);
+    return lval_err("Function 'head' passed too many args !");
+  }
+  
+  if (a->cell[0]->type != LVAL_QEXPR ) {
+    lval_del(a);
+    return lval_err("Function 'head' passed wrong argument !");
+  }
+  
+  if (a->cell[0]->count == 0 ) {
+    lval_del(a);
+    return lval_err("Function 'head' passed {} !");
+  }
+  
+  /* Otherwise take first argument */
+  lval *v = lval_take(a, 0);
+  while (v->count > 1) {lval_del(lval_pop(v,1)); }
+  return v;  
+}
+
+lval* built_in_tail(lval* a) {
+  if (a->count != 1) {
+    lval_del(a);
+    return lval_err("Function 'tail' passed too many arguments!");
+  }
+
+  if (a->cell[0]->type != LVAL_QEXPR) {
+    lval_del(a);
+    return lval_err("Function 'tail' passed incorrect types!");
+  }
+
+  if (a->cell[0]->count == 0) {
+    lval_del(a);
+    return lval_err("Function 'tail' passed {}!");
+  }
+
+  lval* v = lval_take(a, 0);
+  /*delete the first element and return*/
+  lval_del(lval_pop(v, 0)); 
+  return NULL;
+}
+
 lval* builtin_op(char * op, lval* a) {
 
   for (int i = 0; i< a->count ; i++) {
@@ -316,7 +365,8 @@ int main(int argc, char** argv) {
   mpca_lang(MPCA_LANG_DEFAULT,
     "                                                     \
       number   : /-?[0-9]+/ ;                             \
-      symbol   : '+' | '-' | '*' | '/' | \"min\" | \"max\";                  \
+      symbol   : '+' | '-' | '*' | '/' | \"min\" | \"max\" \
+                 |  \"head\" | \"tail\";                  \
       sexpr    : '(' <expr>* ')' ;                        \
       qexpr    : '{' <expr>* '}' ;                        \
       expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
