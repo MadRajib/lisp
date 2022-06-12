@@ -1,4 +1,6 @@
 #include "mpc.h"
+#define LASSERT(args, cond, err) \
+  if (!(cond)) { lval_del(args); return lval_err(err) ;}
 
 #define MIN(x,y) \
   ({(x < y) ? x : y;}) \
@@ -245,24 +247,10 @@ void add_history(char* unused) {}
 
 lval* buil_in_head(lval* a) {
   
-  if (a->count == 0) {
-    lval_del(a);
-    return lval_err("Function 'head' passed no ars!");
-  }
-  if (a->count !=1 ) {
-    lval_del(a);
-    return lval_err("Function 'head' passed too many args !");
-  }
-  
-  if (a->cell[0]->type != LVAL_QEXPR ) {
-    lval_del(a);
-    return lval_err("Function 'head' passed wrong argument !");
-  }
-  
-  if (a->cell[0]->count == 0 ) {
-    lval_del(a);
-    return lval_err("Function 'head' passed {} !");
-  }
+  LASSERT(a, a->count ==0 , "Function 'head' no args!");
+  LASSERT(a, a->count !=1 , "Function 'head' too many args!");
+  LASSERT(a, a->cell[0]->type != LVAL_QEXPR , "Function 'head' wrong args!");
+  LASSERT(a, a->cell[0]->count == 0 , "Function 'head' passed {}!");
   
   /* Otherwise take first argument */
   lval *v = lval_take(a, 0);
@@ -271,20 +259,11 @@ lval* buil_in_head(lval* a) {
 }
 
 lval* built_in_tail(lval* a) {
-  if (a->count != 1) {
-    lval_del(a);
-    return lval_err("Function 'tail' passed too many arguments!");
-  }
-
-  if (a->cell[0]->type != LVAL_QEXPR) {
-    lval_del(a);
-    return lval_err("Function 'tail' passed incorrect types!");
-  }
-
-  if (a->cell[0]->count == 0) {
-    lval_del(a);
-    return lval_err("Function 'tail' passed {}!");
-  }
+  
+  LASSERT(a, a->count ==0 , "Function 'head' no args!");
+  LASSERT(a, a->count !=1 , "Function 'head' too many args!");
+  LASSERT(a, a->cell[0]->type != LVAL_QEXPR , "Function 'head' wrong args!");
+  LASSERT(a, a->cell[0]->count == 0 , "Function 'head' passed {}!");
 
   lval* v = lval_take(a, 0);
   /*delete the first element and return*/
@@ -295,10 +274,7 @@ lval* built_in_tail(lval* a) {
 lval* builtin_op(char * op, lval* a) {
 
   for (int i = 0; i< a->count ; i++) {
-    if(a->cell[i]->type != LVAL_NUM) {
-      lval_del(a);
-      return lval_err("Cannot operate on non number!");
-    }
+    LASSERT(a, a->cell[i]->type != LVAL_NUM, "Cannot operate on non number!");
   }
 
   lval* x = lval_pop(a, 0);
