@@ -271,6 +271,23 @@ lval* built_in_tail(lval* a) {
   return NULL;
 }
 
+lval* built_in_list(lval* a) {
+  a->type = LVAL_QEXPR;
+  return a;
+}
+
+lval* built_in_eval(lval* a) {
+
+  LASSERT(a, a->count == 1, "FUnction 'eval' passed too many arguments!" );
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR, "Function 'eval' invalid argument!" );
+
+  lval* x = lval_take(a, 0);
+  x->type = LVAL_SEXPR;
+  return lval_eval(x);
+
+}
+
+
 lval* builtin_op(char * op, lval* a) {
 
   for (int i = 0; i< a->count ; i++) {
