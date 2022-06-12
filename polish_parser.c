@@ -234,6 +234,14 @@ lval* lval_take(lval* v, int i) {
   return x;
 }
 
+lval* lval_join(lval* v, lval* x) {
+  while (x->count) {
+    v = lval_add(v, lval_pop(x, 0));
+  }
+  lval_del(x);
+  return v;
+}
+
 char* readline(char* prompt) {
   fputs(prompt, stdout);
   fgets(buffer, 2048, stdin);
@@ -247,10 +255,10 @@ void add_history(char* unused) {}
 
 lval* buil_in_head(lval* a) {
   
-  LASSERT(a, a->count ==0 , "Function 'head' no args!");
-  LASSERT(a, a->count !=1 , "Function 'head' too many args!");
-  LASSERT(a, a->cell[0]->type != LVAL_QEXPR , "Function 'head' wrong args!");
-  LASSERT(a, a->cell[0]->count == 0 , "Function 'head' passed {}!");
+  LASSERT(a, a->count != 0 , "Function 'head' no args!");
+  LASSERT(a, a->count == 1 , "Function 'head' too many args!");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR , "Function 'head' wrong args!");
+  LASSERT(a, a->cell[0]->count != 0 , "Function 'head' passed {}!");
   
   /* Otherwise take first argument */
   lval *v = lval_take(a, 0);
@@ -260,10 +268,10 @@ lval* buil_in_head(lval* a) {
 
 lval* built_in_tail(lval* a) {
   
-  LASSERT(a, a->count ==0 , "Function 'head' no args!");
-  LASSERT(a, a->count !=1 , "Function 'head' too many args!");
-  LASSERT(a, a->cell[0]->type != LVAL_QEXPR , "Function 'head' wrong args!");
-  LASSERT(a, a->cell[0]->count == 0 , "Function 'head' passed {}!");
+  LASSERT(a, a->count !=0 , "Function 'head' no args!");
+  LASSERT(a, a->count ==1 , "Function 'head' too many args!");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR , "Function 'head' wrong args!");
+  LASSERT(a, a->cell[0]->count != 0 , "Function 'head' passed {}!");
 
   lval* v = lval_take(a, 0);
   /*delete the first element and return*/
@@ -285,6 +293,21 @@ lval* built_in_eval(lval* a) {
   x->type = LVAL_SEXPR;
   return lval_eval(x);
 
+}
+
+lval* built_in_join(lval* a) {
+  for (int i =0; i < a->count; i++){
+    LASSERT(a, a->cell[i]->type == LVAL_QEXPR, "Function 'join' passed incorrect type");
+  }
+
+  lval* x = lval_pop(a, 0);
+
+  while (a->count) {
+    x = lval_join(x, lval_pop(a,0));
+  }
+
+  lval_del(a);
+  return x;
 }
 
 
