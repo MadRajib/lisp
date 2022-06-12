@@ -25,7 +25,8 @@ void lval_expr_print(lval* v, char open, char close);
 lval* lval_eval_sexpr(lval* v);
 lval* lval_take(lval* v, int i);
 lval* lval_pop(lval* v, int i);
-lval* builtin_op(char* op, lval* a);
+lval* built_in_op(char* op, lval* a);
+lval* bulitin(char* func, lval *a);
 
 static char buffer[2048];
 enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR  };
@@ -214,7 +215,7 @@ lval *lval_eval_sexpr(lval* v) {
     return lval_err("S-expression Does not start with symbol!");
   }
 
-  lval* result =  builtin_op(f->sym, v);
+  lval* result =  bulitin(f->sym, v);
   lval_del(f);
   return result;
 }
@@ -253,7 +254,7 @@ char* readline(char* prompt) {
 
 void add_history(char* unused) {}
 
-lval* buil_in_head(lval* a) {
+lval* built_in_head(lval* a) {
   
   LASSERT(a, a->count != 0 , "Function 'head' no args!");
   LASSERT(a, a->count == 1 , "Function 'head' too many args!");
@@ -276,7 +277,7 @@ lval* built_in_tail(lval* a) {
   lval* v = lval_take(a, 0);
   /*delete the first element and return*/
   lval_del(lval_pop(v, 0)); 
-  return NULL;
+  return v;
 }
 
 lval* built_in_list(lval* a) {
@@ -311,10 +312,10 @@ lval* built_in_join(lval* a) {
 }
 
 
-lval* builtin_op(char * op, lval* a) {
+lval* built_in_op(char * op, lval* a) {
 
   for (int i = 0; i< a->count ; i++) {
-    LASSERT(a, a->cell[i]->type != LVAL_NUM, "Cannot operate on non number!");
+    LASSERT(a, a->cell[i]->type == LVAL_NUM, "Cannot operate on non number!");
   }
 
   lval* x = lval_pop(a, 0);
@@ -345,6 +346,18 @@ lval* builtin_op(char * op, lval* a) {
   lval_del(a);
 
   return x;
+}
+
+lval* bulitin(char* func, lval *a) {
+
+  if (strcmp("list", func) == 0) { return built_in_list(a);}
+  if (strcmp("head", func) == 0) { return built_in_head(a);}
+  if (strcmp("tail", func) == 0) { return built_in_tail(a);}
+  if (strcmp("join", func) == 0) { return built_in_join(a);}
+  if (strcmp("eval", func) == 0) { return built_in_eval(a);}
+  if (strstr("+-/*", func)) { return built_in_op(func, a);}
+  lval_del(a);
+  return lval_err("Unknow Functions!");
 }
 /*
 lval eval(mpc_ast_t* t) {
@@ -382,7 +395,7 @@ int main(int argc, char** argv) {
     "                                                     \
       number   : /-?[0-9]+/ ;                             \
       symbol   : '+' | '-' | '*' | '/' | \"min\" | \"max\" \
-                 |  \"head\" | \"tail\";                  \
+                 |  \"head\" | \"tail\" | \"list\" | \"eval\";                  \
       sexpr    : '(' <expr>* ')' ;                        \
       qexpr    : '{' <expr>* '}' ;                        \
       expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
