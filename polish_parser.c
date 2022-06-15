@@ -90,6 +90,41 @@ lval* lval_fun(lbuiltin func) {
   return v;
 }
 
+lval* lval_copy(lval* v) {
+
+  lval* x = NULL;
+
+  switch (v->type) {
+  case LVAL_FUN:
+    x = lval_fun(v->fun);
+    break;
+  case LVAL_NUM:
+    x = lval_num(v->num);
+    break;
+  case LVAL_ERR:
+    x = lval_err(v->err);
+    break;
+  case LVAL_QEXPR:
+    x = lval_qexpr();
+    x->count = v->count;
+    x->cell = malloc(sizeof(lval*) * x->count);
+    for (int i = 0; i < x->count; i++) {
+      x->cell[i] = lval_copy(v->cell[i]);
+    }
+    break;
+  case LVAL_SEXPR:
+    x = lval_sexpr();
+    x->count = v->count;
+    x->cell = malloc(sizeof(lval*) * x->count);
+    for (int i = 0; i < x->count; i++) {
+      x->cell[i] = lval_copy(v->cell[i]);
+    }
+    break;
+  }
+
+  return x;
+}
+
 void lval_del(lval* v) {
 
   switch (v->type) {
