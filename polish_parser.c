@@ -8,6 +8,16 @@
 #define MAX(x,y) \
   ({(x > y) ? x : y;}) \
 
+struct lval;
+struct lenv;
+typedef struct lval lval;
+typedef struct lenv lenv;
+
+enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR  };
+enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+
+typedef lval*(*lbuiltin) (lenv*, lval*);
+
 typedef struct lval{
   int type;
   long num;
@@ -15,6 +25,7 @@ typedef struct lval{
   /* store string data*/
   char* err;
   char* sym;
+  lbuiltin fun;
 
   /* Count and pointer to a list of "lval*" */
   int count;
@@ -29,8 +40,6 @@ lval* built_in_op(char* op, lval* a);
 lval* bulitin(char* func, lval *a);
 
 static char buffer[2048];
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR  };
-enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
 
 
 
