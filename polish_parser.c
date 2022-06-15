@@ -32,12 +32,19 @@ typedef struct lval{
   struct lval** cell;
 } lval;
 
+typedef struct lenv{
+  int count;
+  char** syms;
+  lval** vals;
+} lenv;
+
 void lval_expr_print(lval* v, char open, char close);
 lval* lval_eval_sexpr(lval* v);
 lval* lval_take(lval* v, int i);
 lval* lval_pop(lval* v, int i);
 lval* built_in_op(char* op, lval* a);
 lval* bulitin(char* func, lval *a);
+void lval_del(lval* v);
 
 static char buffer[2048];
 
@@ -90,6 +97,14 @@ lval* lval_fun(lbuiltin func) {
   return v;
 }
 
+lenv* lenv_new(void) {
+  lenv *e = malloc(sizeof(lenv));
+  e->count = 0;
+  e->syms = NULL;
+  e->vals = NULL;
+  return e;
+}
+
 lval* lval_copy(lval* v) {
 
   lval* x = NULL;
@@ -125,6 +140,34 @@ lval* lval_copy(lval* v) {
   return x;
 }
 
+lval* lenv_get(lenv* e, lval* k) {
+  for (int i=0; i< e->count; i++) {
+    if (strcmp(e->syms[i],k->sym) == 0) {
+      return lval_copy(e->vals[i]);
+    }
+  }
+
+  return lval_err("Unbound symbol!");
+}
+
+void lenv_put(lenv* e, lval* k, lval* v) {
+  for (int i=0; i< e->count; i++) {
+    if (strcmp(e->syms[i], k->sym) == 0) {
+      lval_del(e->vals[i]);
+      e->vals[i] = lval_copy(v);
+    }
+  }
+  
+  e->count++;
+  e->vals = realloc(e->vals, sizeof(lval*) * e->count);
+  e->syms = realloc(e->syms, sizeof(char*) * e->count);
+
+  e->vals[e->count-1] = lval_copy(v);
+  e->syms[e->count-1] = malloc(strlen(k->sym) + 1);
+  strcpy(e->syms[e->count - 1], k->sym);
+
+}
+
 void lval_del(lval* v) {
 
   switch (v->type) {
@@ -154,6 +197,17 @@ void lval_del(lval* v) {
   
   free(v);
   v = NULL;
+}
+
+void lenv_del(lenv* e) {
+  for (int i = 0; i< e->count; i++) {
+    free(e->syms[i]);
+    lval_del(e->vals[i]);
+  }
+
+  free(e->syms);
+  free(e->vals);
+  free(e);
 }
 
 lval* lval_read_num(mpc_ast_t* t) {
