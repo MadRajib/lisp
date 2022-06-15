@@ -83,6 +83,13 @@ lval* lval_qexpr(void) {
   return v;
 }
 
+lval* lval_fun(lbuiltin func) {
+  lval* v = malloc(sizeof(lval));
+  v->type =  LVAL_FUN;
+  v->fun = func;
+  return v;
+}
+
 void lval_del(lval* v) {
 
   switch (v->type) {
@@ -105,8 +112,11 @@ void lval_del(lval* v) {
     v->cell = NULL;
     v->count = 0;
     break; 
+  
+  case LVAL_FUN: break; //dont do anything when deleting 
+  
   }
-
+  
   free(v);
   v = NULL;
 }
@@ -170,6 +180,7 @@ void lval_print(lval* v) {
     case LVAL_NUM : printf("%li", v->num); break;
     case LVAL_ERR : printf("Error: %s", v->err); break;
     case LVAL_SYM : printf("%s", v->sym); break;
+    case LVAL_FUN : printf("<function>"); break;
     case LVAL_SEXPR : lval_expr_print(v, '(', ')'); break;
     case LVAL_QEXPR : lval_expr_print(v, '{', '}'); break;
   }
